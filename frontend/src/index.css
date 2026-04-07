@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  scroll-behavior: smooth;
+}
+
+section {
+  min-height: 100vh;
+  padding-top: 70px;
+  padding-bottom: 40px;
+}
+
+/* Reduce spacing between specific sections */
+#about {
+  padding-bottom: 20px;
+}
+
+#skills {
+  padding-top: 20px;
+}
+
+/* Reduce spacing between all sections */
+section + section {
+  margin-top: -40px;
+}
+
+/* Hero section specific spacing */
+#home {
+  padding-top: 70px;
+  padding-bottom: 30px;
+}
+
+/* Last section spacing */
+#contact {
+  padding-bottom: 40px;
+}
