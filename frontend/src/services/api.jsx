@@ -1,6 +1,9 @@
 import axios from 'axios';
 
-const API_BASE_URL = '/api';
+// Change this URL to your Render backend URL after deployment
+// For local development, use: const API_BASE_URL = 'http://localhost:5000/api';
+// For production on Render, use: const API_BASE_URL = 'https://your-backend-name.onrender.com/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -63,7 +66,6 @@ export const uploadAPI = {
   deleteImage: (publicId) => api.delete(`/upload/${publicId}`),
 };
 
-// Contact API
 export const contactAPI = {
   sendMessage: (data) => api.post('/contact', data),
   getAllMessages: () => api.get('/contact/messages'),

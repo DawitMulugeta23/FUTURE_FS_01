@@ -25,7 +25,7 @@ const transporter = nodemailer.createTransport({
   secure: false,
   auth: {
     user: process.env.SMTP_USER || 'dawitmulugetas23@gmail.com',
-    pass: process.env.SMTP_PASS || 'oxkoqncmtpqlvpqo'
+    pass: process.env.SMTP_PASS || ''
   }
 });
 
@@ -46,9 +46,17 @@ const upload = multer({
   }
 });
 
-// CORS middleware
+// CORS middleware - Configured for production
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  const allowedOrigins = [
+    'https://dawitmulugeta23.github.io',
+    'http://localhost:5173',
+    'http://localhost:3000'
+  ];
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
   res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
@@ -65,15 +73,16 @@ app.use(express.urlencoded({ extended: true }));
 // JWT Secret
 const JWT_SECRET = process.env.JWT_SECRET || 'eyu-love';
 
-// MongoDB Connection
+// MongoDB Connection - FIXED for your connection string
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/portfolio';
 
-mongoose.connect(MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-})
+// Connect to MongoDB
+mongoose.connect(MONGODB_URI)
   .then(() => console.log('✅ MongoDB Connected successfully'))
-  .catch(err => console.error('❌ MongoDB Connection Error:', err));
+  .catch(err => {
+    console.error('❌ MongoDB Connection Error:', err.message);
+    console.log('⚠️  Make sure your IP is whitelisted in MongoDB Atlas');
+  });
 
 // ==================== SCHEMAS ====================
 
@@ -221,59 +230,55 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// ==================== CONTACT ROUTE ====================
-
-// ==================== CONTACT ROUTE ====================
+// ==================== CONTACT ROUTES ====================
 
 app.post('/api/contact', async (req, res) => {
   try {
     const { name, email, subject, message } = req.body;
     
-    // Validate required fields
     if (!name || !email || !subject || !message) {
       return res.status(400).json({ error: 'All fields are required' });
     }
     
-    // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       return res.status(400).json({ error: 'Invalid email format' });
     }
     
-    // Save to database
     const newMessage = new Contact({ name, email, subject, message });
     await newMessage.save();
     
-    // Send email notification
+    // Try to send email notification (don't fail if email doesn't work)
     try {
-      await transporter.sendMail({
-        from: `"Portfolio Contact" <${process.env.SMTP_USER}>`,
-        to: process.env.EMAIL_FROM || 'dawitmulugetas23@gmail.com',
-        subject: `Portfolio Contact: ${subject}`,
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
-            <h2 style="color: #2563eb; border-bottom: 2px solid #2563eb; padding-bottom: 10px;">New Message From Your Portfolio Viewer</h2>
-            <div style="margin: 20px 0;">
-              <p><strong>Name:</strong> ${name}</p>
-              <p><strong>Email:</strong> <a href="mailto:${email}">${email}</a></p>
-              <p><strong>Subject:</strong> ${subject}</p>
-              <p><strong>Message:</strong></p>
-              <div style="background-color: #f3f4f6; padding: 15px; border-radius: 5px; margin-top: 10px;">
-                <p style="margin: 0; white-space: pre-wrap;">${message}</p>
+      if (process.env.SMTP_PASS) {
+        await transporter.sendMail({
+          from: `"Portfolio Contact" <${process.env.SMTP_USER}>`,
+          to: process.env.EMAIL_FROM || 'dawitmulugetas23@gmail.com',
+          subject: `Portfolio Contact: ${subject}`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
+              <h2 style="color: #2563eb; border-bottom: 2px solid #2563eb; padding-bottom: 10px;">New Message From Your Portfolio Viewer</h2>
+              <div style="margin: 20px 0;">
+                <p><strong>Name:</strong> ${name}</p>
+                <p><strong>Email:</strong> <a href="mailto:${email}">${email}</a></p>
+                <p><strong>Subject:</strong> ${subject}</p>
+                <p><strong>Message:</strong></p>
+                <div style="background-color: #f3f4f6; padding: 15px; border-radius: 5px; margin-top: 10px;">
+                  <p style="margin: 0; white-space: pre-wrap;">${message}</p>
+                </div>
+              </div>
+              <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e0e0e0; font-size: 12px; color: #6b7280;">
+                <p>This message was sent from your portfolio website contact form.</p>
+                <p>Sent at: ${new Date().toLocaleString()}</p>
               </div>
             </div>
-            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e0e0e0; font-size: 12px; color: #6b7280;">
-              <p>This message was sent from your portfolio website contact form.</p>
-              <p>Sent at: ${new Date().toLocaleString()}</p>
-            </div>
-          </div>
-        `,
-        text: `New Message From Your Portfolio Viewer\n\nName: ${name}\nEmail: ${email}\nSubject: ${subject}\nMessage: ${message}`
-      });
-      console.log(`📧 Email sent to ${process.env.EMAIL_FROM} from ${email}`);
+          `,
+          text: `New Message From Your Portfolio Viewer\n\nName: ${name}\nEmail: ${email}\nSubject: ${subject}\nMessage: ${message}`
+        });
+        console.log(`📧 Email sent to ${process.env.EMAIL_FROM} from ${email}`);
+      }
     } catch (emailError) {
-      console.error('Email sending error:', emailError);
-      // Don't fail the request if email fails, just log it
+      console.error('Email sending error (non-critical):', emailError.message);
     }
     
     res.status(200).json({ 
@@ -287,7 +292,6 @@ app.post('/api/contact', async (req, res) => {
   }
 });
 
-// Get all contact messages (protected route for admin)
 app.get('/api/contact/messages', authMiddleware, async (req, res) => {
   try {
     const messages = await Contact.find().sort({ createdAt: -1 });
@@ -297,7 +301,6 @@ app.get('/api/contact/messages', authMiddleware, async (req, res) => {
   }
 });
 
-// Mark message as read (protected route for admin)
 app.put('/api/contact/messages/:id/read', authMiddleware, async (req, res) => {
   try {
     const message = await Contact.findByIdAndUpdate(
@@ -312,7 +315,6 @@ app.put('/api/contact/messages/:id/read', authMiddleware, async (req, res) => {
   }
 });
 
-// Delete contact message (protected route for admin)
 app.delete('/api/contact/messages/:id', authMiddleware, async (req, res) => {
   try {
     await Contact.findByIdAndDelete(req.params.id);
@@ -622,22 +624,21 @@ const createDefaultUser = async () => {
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, async () => {
-  console.log(`\n🚀 Server running on http://localhost:${PORT}`);
+// CRITICAL: Bind to '0.0.0.0' for Render deployment
+app.listen(PORT, '0.0.0.0', async () => {
+  console.log(`\n🚀 Server running on port ${PORT}`);
   console.log(`📍 API test: http://localhost:${PORT}/api/test`);
-  console.log(`📍 Upload: POST http://localhost:${PORT}/api/upload`);
-  console.log(`📍 Contact: POST http://localhost:${PORT}/api/contact`);
+  console.log(`📍 MongoDB: ${process.env.MONGODB_URI ? 'Using Atlas' : 'Using local'}`);
   console.log(`\n🔐 Default credentials:`);
   console.log(`   Username: dawit`);
   console.log(`   Password: eyerusalem`);
-  console.log(`\n📧 Email notifications enabled`);
-  console.log(`   Sending to: ${process.env.EMAIL_FROM || 'dawitmulugetas23@gmail.com'}`);
   console.log(`\n📊 Available endpoints:`);
   console.log(`   GET  /api/projects`);
   console.log(`   GET  /api/skills`);
   console.log(`   GET  /api/certificates`);
   console.log(`   GET  /api/settings/work-status`);
   console.log(`   POST /api/contact`);
+  console.log(`   POST /api/auth/login`);
   console.log(`\n`);
   
   await createDefaultUser();
