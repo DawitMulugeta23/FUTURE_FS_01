@@ -73,16 +73,41 @@ app.use(express.urlencoded({ extended: true }));
 // JWT Secret
 const JWT_SECRET = process.env.JWT_SECRET || 'eyu-love';
 
-// MongoDB Connection - FIXED for your connection string
+// MongoDB Connection with retry logic
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/portfolio';
 
-// Connect to MongoDB
-mongoose.connect(MONGODB_URI)
-  .then(() => console.log('✅ MongoDB Connected successfully'))
-  .catch(err => {
+const connectWithRetry = async () => {
+  const options = {
+    serverSelectionTimeoutMS: 30000,
+    socketTimeoutMS: 45000,
+    connectTimeoutMS: 30000,
+    maxPoolSize: 10,
+    retryWrites: true,
+    retryReads: true
+  };
+
+  try {
+    await mongoose.connect(MONGODB_URI, options);
+    console.log('✅ MongoDB Connected successfully');
+    
+    // Only after connection succeeds, run seed and user creation
+    await createDefaultUser();
+    await seedData();
+  } catch (err) {
     console.error('❌ MongoDB Connection Error:', err.message);
-    console.log('⚠️  Make sure your IP is whitelisted in MongoDB Atlas');
-  });
+    console.log('⚠️ Retrying in 5 seconds...');
+    setTimeout(connectWithRetry, 5000);
+  }
+};
+
+// Connection event listeners
+mongoose.connection.on('error', (err) => {
+  console.error('MongoDB connection error:', err);
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.log('MongoDB disconnected');
+});
 
 // ==================== SCHEMAS ====================
 
@@ -248,7 +273,6 @@ app.post('/api/contact', async (req, res) => {
     const newMessage = new Contact({ name, email, subject, message });
     await newMessage.save();
     
-    // Try to send email notification (don't fail if email doesn't work)
     try {
       if (process.env.SMTP_PASS) {
         await transporter.sendMail({
@@ -331,6 +355,7 @@ app.get('/api/projects', async (req, res) => {
     const projects = await Project.find().sort({ createdAt: -1 });
     res.json(projects);
   } catch (error) {
+    console.error('Error fetching projects:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -624,11 +649,14 @@ const createDefaultUser = async () => {
 
 const PORT = process.env.PORT || 5000;
 
+// Start the connection process
+connectWithRetry();
+
 // CRITICAL: Bind to '0.0.0.0' for Render deployment
-app.listen(PORT, '0.0.0.0', async () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`\n🚀 Server running on port ${PORT}`);
   console.log(`📍 API test: http://localhost:${PORT}/api/test`);
-  console.log(`📍 MongoDB: ${process.env.MONGODB_URI ? 'Using Atlas' : 'Using local'}`);
+  console.log(`📍 MongoDB: Using Atlas`);
   console.log(`\n🔐 Default credentials:`);
   console.log(`   Username: dawit`);
   console.log(`   Password: eyerusalem`);
@@ -640,7 +668,4 @@ app.listen(PORT, '0.0.0.0', async () => {
   console.log(`   POST /api/contact`);
   console.log(`   POST /api/auth/login`);
   console.log(`\n`);
-  
-  await createDefaultUser();
-  await seedData();
 });
