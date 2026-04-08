@@ -20,13 +20,13 @@ const Login = () => {
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('username', response.data.username);
       
-      // Redirect to admin panel (HashRouter handles this)
+      // Use HashRouter navigation - no leading slash needed
       navigate('/admin');
     } catch (err) {
       if (err.response) {
         setError(err.response.data?.error || 'Login failed. Please check your credentials.');
       } else if (err.request) {
-        setError('Cannot connect to server. Please make sure the backend is running.');
+        setError('Cannot connect to server. Please check if backend is running.');
       } else {
         setError('An error occurred. Please try again.');
       }

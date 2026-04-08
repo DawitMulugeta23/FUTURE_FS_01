@@ -2,6 +2,7 @@
   "name": "dawitm",
   "private": true,
   "version": "0.0.0",
+  "homepage": "https://dawitmulugeta23.github.io/FUTURE_FS_01/#",
   "type": "module",
   "scripts": {
     "dev": "vite",
