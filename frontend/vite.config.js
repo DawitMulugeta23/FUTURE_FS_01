@@ -3,15 +3,5 @@ import { defineConfig } from 'vite'
 
 export default defineConfig({
   plugins: [react()],
-  server: {
-    port: 5173,
-    proxy: {
-      '/api': {
-        target: 'http://localhost:5000',
-        changeOrigin: true,
-        secure: false,
-        rewrite: (path) => path
-      }
-    }
-  }
+  base: '/FUTURE_FS_01/',  // ← THIS IS CRITICAL - matches your repo name
 })
