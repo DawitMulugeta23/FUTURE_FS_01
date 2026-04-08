@@ -14,28 +14,20 @@ const Login = () => {
     setLoading(true);
     setError('');
     
-    console.log('Attempting login with:', { username });
-    
     try {
       const response = await authAPI.login({ username, password });
-      console.log('Login successful:', response.data);
       
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('username', response.data.username);
       
-      // Redirect to admin panel
+      // Redirect to admin panel (HashRouter handles this)
       navigate('/admin');
     } catch (err) {
-      console.error('Login error details:', err);
       if (err.response) {
-        console.error('Response data:', err.response.data);
-        console.error('Response status:', err.response.status);
         setError(err.response.data?.error || 'Login failed. Please check your credentials.');
       } else if (err.request) {
-        console.error('No response received:', err.request);
-        setError('Cannot connect to server. Please make sure the backend is running on port 5000.');
+        setError('Cannot connect to server. Please make sure the backend is running.');
       } else {
-        console.error('Error:', err.message);
         setError('An error occurred. Please try again.');
       }
     } finally {

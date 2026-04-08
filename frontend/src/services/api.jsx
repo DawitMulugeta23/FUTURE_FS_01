@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-// Use your Render backend URL
+// IMPORTANT: Using your live Render backend URL (not localhost)
+// This will work even when your local machine is off
 const API_BASE_URL = 'https://future-fs-01-2-bfg2.onrender.com/api';
 
 const api = axios.create({
