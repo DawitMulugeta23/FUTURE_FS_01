@@ -1,9 +1,7 @@
 import axios from 'axios';
 
-// Change this URL to your Render backend URL after deployment
-// For local development, use: const API_BASE_URL = 'http://localhost:5000/api';
-// For production on Render, use: const API_BASE_URL = 'https://your-backend-name.onrender.com/api';
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+// Use your Render backend URL
+const API_BASE_URL = 'https://future-fs-01-2-bfg2.onrender.com/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
