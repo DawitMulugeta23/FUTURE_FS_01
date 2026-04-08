@@ -1,5 +1,5 @@
 import { useSelector } from 'react-redux';
-import { Route, BrowserRouter as Router, Routes } from 'react-router-dom';
+import { Route, HashRouter as Router, Routes } from 'react-router-dom';
 import About from "./components/About";
 import AdminPanel from "./components/AdminPanel";
 import Contact from "./components/Contact";
