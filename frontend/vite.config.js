@@ -3,5 +3,5 @@ import { defineConfig } from 'vite'
 
 export default defineConfig({
   plugins: [react()],
-  base: './',  // Changed from '/FUTURE_FS_01/' to './' for better routing
+  base: '/FUTURE_FS_01/',  // ← THIS IS CRITICAL - matches your repo name
 })
