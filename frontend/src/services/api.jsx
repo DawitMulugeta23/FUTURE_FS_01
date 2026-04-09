@@ -53,6 +53,10 @@ export const settingsAPI = {
   getProfileImage: () => api.get("/settings/profile-image"),
   updateProfileImage: (profileImage) =>
     api.put("/settings/profile-image", { profileImage }),
+  // Add these new methods
+  getAdminPath: () => api.get("/settings/admin-path"),
+  updateAdminPath: (adminPath) =>
+    api.put("/settings/admin-path", { adminPath }),
 };
 
 export const uploadAPI = {

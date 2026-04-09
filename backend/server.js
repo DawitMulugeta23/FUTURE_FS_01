@@ -97,8 +97,7 @@ const connectWithRetry = async () => {
     await mongoose.connect(MONGODB_URI, options);
     console.log("✅ MongoDB Connected successfully");
 
-    // Only after connection succeeds, run seed and user creation
-    await createDefaultUser();
+    // Only after connection succeeds, run seed and data initialization
     await seedData();
   } catch (err) {
     console.error("❌ MongoDB Connection Error:", err.message);
@@ -117,19 +116,6 @@ mongoose.connection.on("disconnected", () => {
 });
 
 // ==================== SCHEMAS ====================
-
-const userSchema = new mongoose.Schema({
-  username: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
-});
-
-userSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next();
-  this.password = await bcrypt.hash(this.password, 10);
-  next();
-});
-
-const User = mongoose.model("User", userSchema);
 
 const projectSchema = new mongoose.Schema({
   title: { type: String, required: true },
@@ -235,42 +221,6 @@ app.delete("/api/upload/:publicId", authMiddleware, async (req, res) => {
   } catch (error) {
     console.error("Delete error:", error);
     res.status(500).json({ error: "Failed to delete image" });
-  }
-});
-
-// ==================== AUTH ROUTES ====================
-
-app.post("/api/auth/login", async (req, res) => {
-  try {
-    const { username, password } = req.body;
-    console.log("📝 Login attempt for username:", username);
-
-    const user = await User.findOne({ username });
-    if (!user) {
-      console.log("❌ User not found:", username);
-      return res.status(401).json({ error: "Invalid credentials" });
-    }
-
-    console.log("✅ User found, comparing passwords...");
-    const isMatch = await bcrypt.compare(password, user.password);
-    console.log("🔐 Password match result:", isMatch);
-
-    if (!isMatch) {
-      console.log("❌ Password mismatch for user:", username);
-      return res.status(401).json({ error: "Invalid credentials" });
-    }
-
-    const token = jwt.sign(
-      { id: user._id, username: user.username },
-      JWT_SECRET,
-      { expiresIn: "7d" },
-    );
-
-    console.log("✅ Login successful for:", username);
-    res.json({ token, username: user.username });
-  } catch (error) {
-    console.error("Login error:", error);
-    res.status(500).json({ error: error.message });
   }
 });
 
@@ -584,6 +534,44 @@ app.put("/api/settings/profile-image", authMiddleware, async (req, res) => {
   }
 });
 
+// ==================== ADMIN PATH ROUTE ====================
+
+// Get admin path (default: 'love')
+app.get("/api/settings/admin-path", async (req, res) => {
+  try {
+    let setting = await Setting.findOne({ key: "adminPath" });
+    if (!setting) {
+      setting = await Setting.create({ key: "adminPath", value: "love" });
+    }
+    res.json({ adminPath: setting.value });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update admin path (protected - requires auth)
+app.put("/api/settings/admin-path", authMiddleware, async (req, res) => {
+  try {
+    const { adminPath } = req.body;
+
+    // Validate: only letters, numbers, and hyphens
+    if (!/^[a-zA-Z0-9-]+$/.test(adminPath)) {
+      return res.status(400).json({
+        error: "Admin path can only contain letters, numbers, and hyphens",
+      });
+    }
+
+    const setting = await Setting.findOneAndUpdate(
+      { key: "adminPath" },
+      { key: "adminPath", value: adminPath, updatedAt: Date.now() },
+      { upsert: true, new: true },
+    );
+    res.json({ adminPath: setting.value });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
 // ==================== TEST ROUTE ====================
 
 app.get("/api/test", (req, res) => {
@@ -594,6 +582,13 @@ app.get("/api/test", (req, res) => {
 
 const seedData = async () => {
   try {
+    // Initialize admin path if not exists
+    let adminPathSetting = await Setting.findOne({ key: "adminPath" });
+    if (!adminPathSetting) {
+      await Setting.create({ key: "adminPath", value: "love" });
+      console.log("✅ Admin path initialized to: love");
+    }
+
     const projectCount = await Project.countDocuments();
     if (projectCount === 0) {
       await Project.insertMany([
@@ -669,20 +664,6 @@ const seedData = async () => {
   }
 };
 
-const createDefaultUser = async () => {
-  try {
-    // Delete existing user completely
-    await User.deleteOne({ username: "dawit" });
-
-    // Create fresh user with correct password
-    const hashedPassword = await bcrypt.hash("eyerusalem", 10);
-    await User.create({ username: "dawit", password: hashedPassword });
-    console.log("✅ Default user RECREATED: dawit / eyerusalem");
-  } catch (error) {
-    console.error("Error creating default user:", error);
-  }
-};
-
 // ==================== START SERVER ====================
 
 const PORT = process.env.PORT || 5000;
@@ -695,15 +676,16 @@ app.listen(PORT, "0.0.0.0", () => {
   console.log(`\n🚀 Server running on port ${PORT}`);
   console.log(`📍 API test: http://localhost:${PORT}/api/test`);
   console.log(`📍 MongoDB: Using Atlas`);
-  console.log(`\n🔐 Default credentials:`);
-  console.log(`   Username: dawit`);
-  console.log(`   Password: eyerusalem`);
   console.log(`\n📊 Available endpoints:`);
   console.log(`   GET  /api/projects`);
   console.log(`   GET  /api/skills`);
   console.log(`   GET  /api/certificates`);
   console.log(`   GET  /api/settings/work-status`);
+  console.log(`   GET  /api/settings/admin-path`);
+  console.log(`   PUT  /api/settings/admin-path (protected)`);
   console.log(`   POST /api/contact`);
-  console.log(`   POST /api/auth/login`);
+  console.log(`\n🔐 Admin access:`);
+  console.log(`   Default admin path: love`);
+  console.log(`   Update path via Admin Panel settings`);
   console.log(`\n`);
 });
