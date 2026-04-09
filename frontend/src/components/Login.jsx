@@ -43,11 +43,7 @@ const Login = () => {
             <span className="text-2xl font-black text-white">DM</span>
           </div>
           <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Admin Login</h2>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mt-2">
-            Username: <span className="font-mono bg-gray-100 dark:bg-slate-700 px-2 py-1 rounded">dawit</span>
-            <br />
-            Password: <span className="font-mono bg-gray-100 dark:bg-slate-700 px-2 py-1 rounded">eyerusalem</span>
-          </p>
+         
         </div>
         
         {error && (
