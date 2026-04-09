@@ -4,4 +4,11 @@ import { defineConfig } from "vite";
 export default defineConfig({
   plugins: [react()],
   base: process.env.NODE_ENV === "production" ? "/FUTURE_FS_01/" : "/",
+  build: {
+    rollupOptions: {
+      input: {
+        main: "index.html",
+      },
+    },
+  },
 });
