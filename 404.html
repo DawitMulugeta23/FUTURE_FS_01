@@ -1,0 +1,16 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Redirecting...</title>
+    <script>
+      // Get the path after the repo name
+      const path = window.location.pathname.replace("/FUTURE_FS_01", "");
+      sessionStorage.setItem("redirectPath", path);
+      window.location.href = "/FUTURE_FS_01/";
+    </script>
+  </head>
+  <body>
+    Redirecting...
+  </body>
+</html>
