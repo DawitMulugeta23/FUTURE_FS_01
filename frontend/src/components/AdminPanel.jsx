@@ -9,8 +9,6 @@ import {
 } from "../services/api";
 
 const AdminPanel = () => {
-  const [adminPath, setAdminPath] = useState('');
-  const [updatingPath, setUpdatingPath]= useState(false);
   const isDark = useSelector((state) => state.nav.darkMode);
   const [activeTab, setActiveTab] = useState("projects");
   const [projects, setProjects] = useState([]);
@@ -18,51 +16,18 @@ const AdminPanel = () => {
   const [certificates, setCertificates] = useState([]);
   const [workStatus, setWorkStatus] = useState(true);
   const [profileImage, setProfileImage] = useState("");
+  const [adminPath, setAdminPath] = useState("");
   const [editingItem, setEditingItem] = useState(null);
   const [formData, setFormData] = useState({});
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [updatingPath, setUpdatingPath] = useState(false);
 
   useEffect(() => {
     fetchAllData();
+    fetchAdminPath();
   }, []);
- useEffect(()=>{
-  fetchAdminPath();
- },[]);
-  const fetchAdminPath = async () => {
-    try {
-      const response = await settingsAPI.getAdminPath();
-      setAdminPath(response.data.adminPath);
-    } catch (error) {
-      console.error('Error fetching admin path:', error);
-    }
-  };
-  
-  // Add this function with other functions
-  const updateAdminPath = async () => {
-    const pathRegex = /^[a-zA-Z0-9-]+$/;
 
-    if (!adminPath || !pathRegex.test(adminPath)) {
-      alert('Admin path can only contain letters, numbers, and hyphens');
-      return;
-    }
-    
-    setUpdatingPath(true);
-    try {
-      
-      await settingsAPI.updateAdminPath(adminPath);
-      alert(`Admin path updated to: ${adminPath}\nNew admin URL will be active after page refresh.`);
-
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
-    } catch (error) {
-      console.error('Error updating admin path:', error);
-      alert('Error updating admin path: ' + (error.response?.data?.error || error.message));
-    } finally {
-      setUpdatingPath(false);
-    }
-  };
   const fetchAllData = async () => {
     setLoading(true);
     try {
@@ -83,6 +48,42 @@ const AdminPanel = () => {
       console.error("Error fetching data:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAdminPath = async () => {
+    try {
+      const response = await settingsAPI.getAdminPath();
+      setAdminPath(response.data.adminPath);
+    } catch (error) {
+      console.error("Error fetching admin path:", error);
+    }
+  };
+
+  const updateAdminPath = async () => {
+    const pathRegex = /^[a-zA-Z0-9-]+$/;
+    if (!adminPath || !pathRegex.test(adminPath)) {
+      alert("Admin path can only contain letters, numbers, and hyphens");
+      return;
+    }
+
+    setUpdatingPath(true);
+    try {
+      await settingsAPI.updateAdminPath(adminPath);
+      alert(
+        `Admin path updated to: ${adminPath}\nNew admin URL will be active after page refresh.`,
+      );
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } catch (error) {
+      console.error("Error updating admin path:", error);
+      alert(
+        "Error updating admin path: " +
+          (error.response?.data?.error || error.message),
+      );
+    } finally {
+      setUpdatingPath(false);
     }
   };
 
@@ -198,7 +199,7 @@ const AdminPanel = () => {
           />
           <input
             type="text"
-            placeholder="Tech (comma separated)"
+            placeholder="Tech (comma separated, e.g., React, Node.js, MongoDB)"
             value={formData.tech || ""}
             onChange={(e) => setFormData({ ...formData, tech: e.target.value })}
             className="w-full p-3 border rounded-xl dark:bg-slate-700 dark:border-slate-600"
@@ -262,36 +263,42 @@ const AdminPanel = () => {
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
             type="text"
-            placeholder="Skill Name"
+            placeholder="Skill Name (e.g., React.js, Node.js, MongoDB)"
             value={formData.name || ""}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             className="w-full p-3 border rounded-xl dark:bg-slate-700 dark:border-slate-600"
             required
           />
+
           <select
             value={formData.level || "Intermediate"}
             onChange={(e) =>
               setFormData({ ...formData, level: e.target.value })
             }
             className="w-full p-3 border rounded-xl dark:bg-slate-700 dark:border-slate-600"
+            required
           >
-            <option>Beginner</option>
-            <option>Intermediate</option>
-            <option>Advanced</option>
-            <option>Expert</option>
+            <option value="Beginner">Beginner</option>
+            <option value="Intermediate">Intermediate</option>
+            <option value="Advanced">Advanced</option>
+            <option value="Expert">Expert</option>
           </select>
+
           <select
             value={formData.category || "Frontend"}
             onChange={(e) =>
               setFormData({ ...formData, category: e.target.value })
             }
             className="w-full p-3 border rounded-xl dark:bg-slate-700 dark:border-slate-600"
+            required
           >
-            <option>Frontend</option>
-            <option>Backend</option>
-            <option>Database</option>
-            <option>DevOps</option>
+            <option value="Frontend">Frontend</option>
+            <option value="Backend">Backend</option>
+            <option value="Database">Database</option>
+            <option value="DevOps">DevOps</option>
+            <option value="Other">Other</option>
           </select>
+
           <button
             type="submit"
             className="w-full bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 transition-all"
@@ -317,7 +324,7 @@ const AdminPanel = () => {
           />
           <input
             type="text"
-            placeholder="Provider"
+            placeholder="Provider (e.g., Udacity, Coursera, Udemy)"
             value={formData.provider || ""}
             onChange={(e) =>
               setFormData({ ...formData, provider: e.target.value })
@@ -356,7 +363,7 @@ const AdminPanel = () => {
 
           <input
             type="url"
-            placeholder="Certificate Link"
+            placeholder="Certificate Link (optional)"
             value={formData.link || "#"}
             onChange={(e) => setFormData({ ...formData, link: e.target.value })}
             className="w-full p-3 border rounded-xl dark:bg-slate-700 dark:border-slate-600"
@@ -408,6 +415,40 @@ const AdminPanel = () => {
           </div>
         </div>
 
+        {/* Admin Security Settings */}
+        <div
+          className={`p-6 rounded-2xl mb-8 ${isDark ? "bg-slate-800" : "bg-white shadow-lg"}`}
+        >
+          <h2 className="text-xl font-bold mb-4">Admin Security Settings</h2>
+          <p className="text-sm text-gray-500 mb-3">
+            Change your admin panel URL path
+          </p>
+          <div className="flex gap-3">
+            <input
+              type="text"
+              value={adminPath}
+              onChange={(e) => setAdminPath(e.target.value)}
+              placeholder="admin-path"
+              className="flex-1 p-3 border rounded-xl dark:bg-slate-700 dark:border-slate-600"
+            />
+            <button
+              onClick={updateAdminPath}
+              disabled={updatingPath}
+              className="px-6 py-3 bg-purple-600 text-white rounded-xl font-bold hover:bg-purple-700 transition-all disabled:opacity-50"
+            >
+              {updatingPath ? "Updating..." : "Update Path"}
+            </button>
+          </div>
+          <p className="text-xs text-gray-500 mt-2">
+            Current admin URL:{" "}
+            <strong className="text-blue-600">/#/{adminPath || "love"}</strong>
+          </p>
+          <p className="text-xs text-yellow-600 mt-2">
+            ⚠️ After changing, you'll need to use the new URL to access admin
+            panel
+          </p>
+        </div>
+
         {/* CV and Profile Image Management */}
         <div className="grid md:grid-cols-2 gap-6 mb-8">
           <div
@@ -451,19 +492,6 @@ const AdminPanel = () => {
               <p className="text-blue-500 text-sm mt-1">Uploading...</p>
             )}
           </div>
-          <div className={`p-6 rounded-2x1 ${isDark? 'bg-slate-800' : 'bg-white shadow-lg'}`}>
-            <h2 className="text-xl font-bold mb-4">Admin Security Settings</h2>
-            <p className="text-sm text-gray-500 mb-3">Change your adimn panel URL path</p>
-            <div className="flex gap-3">
-              <input type="text" value={adminPath} onChange={(e) => setAdminPath(e.target.value)}
-              placeholder="admin secret" className="flex-1 p-3 border rounded-xl dark:bg-slate-700 dark:border-slate-600"/>
-              <button onClick={updateAdminPath} disabled={updatingPath} className="px-6 py-3 bg-purple-600 text-white rounded-xl font-bold hover:bg-purple-50 transition-all disabled:opacity-50">{updatingPath ? 'updating...' : 'Update path'}</button>
-            </div>
-            <p className="text-xs text-grey-500 mt-2">
-              Current admin Url: <strong className="text-blue-600">/#/{adminPath || 'love'}</strong>
-            </p>
-            <p className="text-xs text-yellow-50 mt-2">⚠️ After changing, you'll need to use the new URL to access admin panel</p>
-          </div>
         </div>
 
         <div className="flex gap-2 mb-8 border-b dark:border-slate-700">
@@ -504,7 +532,8 @@ const AdminPanel = () => {
           </div>
 
           <div
-            className={`p-6 rounded-2xl ${isDark ? "bg-slate-800" : "bg-white shadow-lg"}`}>
+            className={`p-6 rounded-2xl ${isDark ? "bg-slate-800" : "bg-white shadow-lg"}`}
+          >
             <h2 className="text-xl font-bold mb-4">Manage {activeTab}</h2>
             <div className="space-y-3 max-h-[500px] overflow-y-auto">
               {(activeTab === "projects"

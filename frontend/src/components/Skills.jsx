@@ -8,117 +8,6 @@ const Skills = () => {
   const [skills, setSkills] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // All skills with progress percentages (Languages, Frameworks, Databases)
-  const allSkills = [
-    // Programming Languages
-    {
-      name: "JavaScript",
-      category: "Language",
-      level: "Advanced",
-      percentage: 85,
-      icon: "🟡",
-    },
-    {
-      name: "Python",
-      category: "Language",
-      level: "Intermediate",
-      percentage: 75,
-      icon: "🐍",
-    },
-    {
-      name: "PHP",
-      category: "Language",
-      level: "Intermediate",
-      percentage: 70,
-      icon: "🐘",
-    },
-    {
-      name: "Java",
-      category: "Language",
-      level: "Intermediate",
-      percentage: 65,
-      icon: "☕",
-    },
-    {
-      name: "HTML/CSS",
-      category: "Language",
-      level: "Advanced",
-      percentage: 90,
-      icon: "🎨",
-    },
-
-    // Frameworks & Libraries
-    {
-      name: "React.js",
-      category: "Framework",
-      level: "Advanced",
-      percentage: 85,
-      icon: "⚛️",
-    },
-    {
-      name: "Node.js",
-      category: "Framework",
-      level: "Intermediate",
-      percentage: 75,
-      icon: "🟢",
-    },
-    {
-      name: "Express.js",
-      category: "Framework",
-      level: "Intermediate",
-      percentage: 70,
-      icon: "🚂",
-    },
-    {
-      name: "Tailwind CSS",
-      category: "Framework",
-      level: "Advanced",
-      percentage: 85,
-      icon: "🎨",
-    },
-    {
-      name: "Bootstrap",
-      category: "Framework",
-      level: "Intermediate",
-      percentage: 75,
-      icon: "🅱️",
-    },
-
-    // Databases
-    {
-      name: "MongoDB",
-      category: "Database",
-      level: "Intermediate",
-      percentage: 75,
-      icon: "🍃",
-    },
-    {
-      name: "MySQL",
-      category: "Database",
-      level: "Intermediate",
-      percentage: 70,
-      icon: "🐬",
-    },
-    {
-      name: "PostgreSQL",
-      category: "Database",
-      level: "Beginner",
-      percentage: 50,
-      icon: "🐘",
-    },
-  ];
-
-  // Group skills by category
-  const groupedSkills = {
-    "Programming Languages": allSkills.filter(
-      (skill) => skill.category === "Language",
-    ),
-    "Frameworks & Libraries": allSkills.filter(
-      (skill) => skill.category === "Framework",
-    ),
-    Databases: allSkills.filter((skill) => skill.category === "Database"),
-  };
-
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -128,6 +17,7 @@ const Skills = () => {
         ]);
         setSkills(skillsRes.data);
         setCertificates(certsRes.data);
+        console.log("Skills fetched:", skillsRes.data);
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {
@@ -137,6 +27,52 @@ const Skills = () => {
     fetchData();
   }, []);
 
+  // Map skill level to percentage
+  const getPercentageFromLevel = (level) => {
+    switch (level?.toLowerCase()) {
+      case "expert":
+        return 95;
+      case "advanced":
+        return 85;
+      case "intermediate":
+        return 70;
+      case "beginner":
+        return 50;
+      default:
+        return 70;
+    }
+  };
+
+  // Get icon based on skill name/category
+  const getSkillIcon = (skillName, category) => {
+    const icons = {
+      JavaScript: "🟡",
+      "React.js": "⚛️",
+      "Node.js": "🟢",
+      Python: "🐍",
+      Java: "☕",
+      PHP: "🐘",
+      "HTML/CSS": "🎨",
+      "Tailwind CSS": "🎨",
+      Bootstrap: "🅱️",
+      "Express.js": "🚂",
+      MongoDB: "🍃",
+      MySQL: "🐬",
+      PostgreSQL: "🐘",
+      Mongoose: "🍃",
+      Git: "📝",
+      GitHub: "🐙",
+    };
+
+    if (icons[skillName]) return icons[skillName];
+
+    // Default icons by category
+    if (category === "Frontend") return "🎨";
+    if (category === "Backend") return "⚙️";
+    if (category === "Database") return "🗄️";
+    return "📚";
+  };
+
   const getProgressColor = (percentage) => {
     if (percentage >= 80) return "bg-green-500";
     if (percentage >= 60) return "bg-blue-500";
@@ -144,31 +80,30 @@ const Skills = () => {
     return "bg-red-500";
   };
 
-  const getCategoryColor = (category) => {
-    switch (category) {
-      case "Programming Languages":
-        return "text-blue-600 border-blue-600";
-      case "Frameworks & Libraries":
-        return "text-purple-600 border-purple-600";
-      case "Databases":
-        return "text-green-600 border-green-600";
+  const getLevelBadgeColor = (level) => {
+    switch (level?.toLowerCase()) {
+      case "expert":
+        return "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400";
+      case "advanced":
+        return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400";
+      case "intermediate":
+        return "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400";
+      case "beginner":
+        return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400";
       default:
-        return "text-blue-600 border-blue-600";
+        return "bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400";
     }
   };
 
-  const getCategoryIcon = (category) => {
-    switch (category) {
-      case "Programming Languages":
-        return "💻";
-      case "Frameworks & Libraries":
-        return "🚀";
-      case "Databases":
-        return "🗄️";
-      default:
-        return "📚";
+  // Group skills by category
+  const groupedSkills = skills.reduce((groups, skill) => {
+    const category = skill.category || "Other";
+    if (!groups[category]) {
+      groups[category] = [];
     }
-  };
+    groups[category].push(skill);
+    return groups;
+  }, {});
 
   if (loading) {
     return (
@@ -194,27 +129,45 @@ const Skills = () => {
           Skills & Certificates
         </h2>
 
-        {/* All Skills with Progress Bars */}
-        <div className="mb-12">
-          {Object.entries(groupedSkills).map(
-            ([category, skillsList]) =>
-              skillsList.length > 0 && (
-                <div key={category} className="mb-10">
-                  <h3
-                    className={`text-2xl font-bold text-center mb-6 flex items-center justify-center gap-3 ${getCategoryColor(category)}`}
+        {/* All Skills from Database */}
+        {Object.keys(groupedSkills).length > 0 ? (
+          <div className="mb-12">
+            {Object.entries(groupedSkills).map(([category, categorySkills]) => (
+              <div key={category} className="mb-10">
+                <h3
+                  className={`text-2xl font-bold text-center mb-6 flex items-center justify-center gap-3`}
+                >
+                  <span className="text-3xl">
+                    {category === "Frontend" && "🎨"}
+                    {category === "Backend" && "⚙️"}
+                    {category === "Database" && "🗄️"}
+                    {category === "DevOps" && "🚀"}
+                    {!["Frontend", "Backend", "Database", "DevOps"].includes(
+                      category,
+                    ) && "📚"}
+                  </span>
+                  <span
+                    className={`${isDark ? "text-blue-400" : "text-blue-600"}`}
                   >
-                    <span className="text-3xl">
-                      {getCategoryIcon(category)}
-                    </span>
                     {category}
-                    <span className="text-3xl">
-                      {getCategoryIcon(category)}
-                    </span>
-                  </h3>
-                  <div className="grid md:grid-cols-2 gap-4 max-w-5xl mx-auto">
-                    {skillsList.map((skill, index) => (
+                  </span>
+                  <span className="text-3xl">
+                    {category === "Frontend" && "🎨"}
+                    {category === "Backend" && "⚙️"}
+                    {category === "Database" && "🗄️"}
+                    {category === "DevOps" && "🚀"}
+                    {!["Frontend", "Backend", "Database", "DevOps"].includes(
+                      category,
+                    ) && "📚"}
+                  </span>
+                </h3>
+                <div className="grid md:grid-cols-2 gap-4 max-w-5xl mx-auto">
+                  {categorySkills.map((skill) => {
+                    const percentage = getPercentageFromLevel(skill.level);
+                    const icon = getSkillIcon(skill.name, skill.category);
+                    return (
                       <div
-                        key={index}
+                        key={skill._id}
                         className={`p-4 rounded-2xl transition-all duration-300 transform hover:scale-105 ${
                           isDark
                             ? "bg-slate-800/50 border border-slate-700 hover:border-blue-500"
@@ -223,46 +176,47 @@ const Skills = () => {
                       >
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
-                            <span className="text-2xl">{skill.icon}</span>
+                            <span className="text-2xl">{icon}</span>
                             <h4 className="text-base font-bold">
                               {skill.name}
                             </h4>
                           </div>
                           <div className="flex items-center gap-2">
                             <span
-                              className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                                skill.level === "Advanced"
-                                  ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                                  : skill.level === "Intermediate"
-                                    ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-                                    : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
-                              }`}
+                              className={`text-xs font-semibold px-2 py-0.5 rounded-full ${getLevelBadgeColor(skill.level)}`}
                             >
-                              {skill.level}
+                              {skill.level || "Intermediate"}
                             </span>
                             <span className="text-base font-bold text-blue-600">
-                              {skill.percentage}%
+                              {percentage}%
                             </span>
                           </div>
                         </div>
                         <div className="relative w-full h-2.5 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden">
                           <div
-                            className={`absolute top-0 left-0 h-full rounded-full transition-all duration-1000 ease-out ${getProgressColor(skill.percentage)}`}
-                            style={{ width: `${skill.percentage}%` }}
+                            className={`absolute top-0 left-0 h-full rounded-full transition-all duration-1000 ease-out ${getProgressColor(percentage)}`}
+                            style={{ width: `${percentage}%` }}
                           >
                             <div className="absolute top-0 right-0 h-full w-2 bg-white/30 rounded-full"></div>
                           </div>
                         </div>
                       </div>
-                    ))}
-                  </div>
+                    );
+                  })}
                 </div>
-              ),
-          )}
-        </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-12 mb-12">
+            <p className="text-gray-500 text-lg">
+              No skills added yet. Add skills from admin panel.
+            </p>
+          </div>
+        )}
 
         {/* Certificates Grid */}
-        {certificates.length > 0 && (
+        {certificates.length > 0 ? (
           <div>
             <h3 className="text-2xl font-bold text-center mb-6 text-orange-600 flex items-center justify-center gap-3">
               <span className="text-3xl">🏆</span>
@@ -323,11 +277,11 @@ const Skills = () => {
               ))}
             </div>
           </div>
-        )}
-
-        {certificates.length === 0 && (
+        ) : (
           <div className="text-center py-12">
-            <p className="text-gray-500 text-lg">No certificates added yet.</p>
+            <p className="text-gray-500 text-lg">
+              No certificates added yet. Add certificates from admin panel.
+            </p>
           </div>
         )}
       </div>
