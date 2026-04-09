@@ -70,8 +70,8 @@ export const uploadAPI = {
 };
 
 export const contactAPI = {
-  sendMessage: (data) => api.post("/contact", data),
-  getAllMessages: () => api.get("/contact/messages"),
+  sendMessage: (data) => api.post('/contact', data),
+  getAllMessages: () => api.get('/contact/messages'),
   markAsRead: (id) => api.put(`/contact/messages/${id}/read`),
   deleteMessage: (id) => api.delete(`/contact/messages/${id}`),
 };

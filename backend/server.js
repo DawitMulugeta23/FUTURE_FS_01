@@ -9,6 +9,38 @@ require("dotenv").config();
 
 const app = express();
 
+app.use(cors({
+  origin:[
+    "https://dawitmulugeta23.github.io",
+    "http://localhost:5173",
+    "http://localhost:3000"
+  ],
+  credentials:true,
+  methods:['GET','POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders:['Content-Type', 'Authorization', 'Origin', 'X-Requested-with','accept'],
+  optionsSuccessStatus:200
+}));
+app.use((req, res, next)=>{
+  const allowOrigins=[
+    "https://dawitmulugeta23.github.io",
+    "http://localost:5173",
+    "http://localhost:3000"
+  ];
+  const origin = req.headers.origin;
+  if(allowOrigins.includes(origin)){
+    res.header("Access-Control-Allow-Origin",origin);
+  }
+  res.header("Access-Control-Allow-Credentials", "true");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
+  res.header("Access-Control-Max-Age", "86400"); // Cache preflight for 24 hours
+  
+  // Handle preflight requests
+  if (req.method === "OPTIONS") {
+    return res.status(200).json({});
+  }
+  next();
+});
 // Cloudinary Configuration
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME || "dnjwdbxxt",
@@ -203,7 +235,7 @@ app.delete("/api/upload/:publicId", async (req, res) => {
 app.post("/api/contact", async (req, res) => {
   try {
     const { name, email, subject, message } = req.body;
-
+    console.log("Contact form submission received: ",{name, email, subject});
     if (!name || !email || !subject || !message) {
       return res.status(400).json({ error: "All fields are required" });
     }
@@ -215,16 +247,19 @@ app.post("/api/contact", async (req, res) => {
 
     const newMessage = new Contact({ name, email, subject, message });
     await newMessage.save();
+    console.log("Message saved to Database");
 
+    let emailSent = false;
     try {
       if (process.env.SMTP_PASS) {
         await transporter.sendMail({
           from: `"Portfolio Contact" <${process.env.SMTP_USER}>`,
           to: process.env.EMAIL_FROM || "dawitmulugetas23@gmail.com",
+          replyTo: email,
           subject: `Portfolio Contact: ${subject}`,
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
-              <h2 style="color: #2563eb; border-bottom: 2px solid #2563eb; padding-bottom: 10px;">New Message From Your Portfolio Viewer</h2>
+              <h2 style="color: #2563eb; border-bottom: 2px solid #2563eb; padding-bottom: 10px;">New Message From Your Portfolio</h2>
               <div style="margin: 20px 0;">
                 <p><strong>Name:</strong> ${name}</p>
                 <p><strong>Email:</strong> <a href="mailto:${email}">${email}</a></p>
@@ -240,17 +275,21 @@ app.post("/api/contact", async (req, res) => {
               </div>
             </div>
           `,
-          text: `New Message From Your Portfolio Viewer\n\nName: ${name}\nEmail: ${email}\nSubject: ${subject}\nMessage: ${message}`,
+          text: `New Message From Your Portfolio\n\nName: ${name}\nEmail: ${email}\nSubject: ${subject}\nMessage: ${message}`,
         });
-        console.log(`📧 Email sent to ${process.env.EMAIL_FROM} from ${email}`);
+        emailSent = true;
+        console.log(`📧 Email sent successfully to ${process.env.EMAIL_FROM}`);
+      } else {
+        console.log("⚠️ SMTP_PASS not configured, email not sent");
       }
     } catch (emailError) {
       console.error("Email sending error (non-critical):", emailError.message);
-    }
+      }
 
     res.status(200).json({
       success: true,
       message: "Message sent successfully! I will get back to you soon.",
+      emailSent:emailSent
     });
   } catch (error) {
     console.error("Contact form error:", error);
