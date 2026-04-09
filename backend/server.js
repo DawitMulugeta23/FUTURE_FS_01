@@ -1,8 +1,6 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
 const multer = require("multer");
 const cloudinary = require("cloudinary").v2;
 const path = require("path");
@@ -76,9 +74,6 @@ app.use((req, res, next) => {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// JWT Secret
-const JWT_SECRET = process.env.JWT_SECRET || "eyu-love";
-
 // MongoDB Connection with retry logic
 const MONGODB_URI =
   process.env.MONGODB_URI || "mongodb://localhost:27017/portfolio";
@@ -97,7 +92,7 @@ const connectWithRetry = async () => {
     await mongoose.connect(MONGODB_URI, options);
     console.log("✅ MongoDB Connected successfully");
 
-    // Only after connection succeeds, run seed and data initialization
+    // Only after connection succeeds, run seed
     await seedData();
   } catch (err) {
     console.error("❌ MongoDB Connection Error:", err.message);
@@ -166,54 +161,33 @@ const contactSchema = new mongoose.Schema({
 });
 const Contact = mongoose.model("Contact", contactSchema);
 
-// ==================== MIDDLEWARE ====================
-
-const authMiddleware = (req, res, next) => {
-  const token = req.header("Authorization")?.replace("Bearer ", "");
-  if (!token) {
-    return res.status(401).json({ error: "No token, authorization denied" });
-  }
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded;
-    next();
-  } catch (error) {
-    res.status(401).json({ error: "Token is not valid" });
-  }
-};
-
 // ==================== IMAGE UPLOAD ROUTE ====================
 
-app.post(
-  "/api/upload",
-  authMiddleware,
-  upload.single("image"),
-  async (req, res) => {
-    try {
-      if (!req.file) {
-        return res.status(400).json({ error: "No image file provided" });
-      }
-
-      const base64Image = req.file.buffer.toString("base64");
-      const dataURI = `data:${req.file.mimetype};base64,${base64Image}`;
-
-      const result = await cloudinary.uploader.upload(dataURI, {
-        folder: "portfolio",
-        transformation: [{ quality: "auto" }],
-      });
-
-      res.json({
-        imageUrl: result.secure_url,
-        publicId: result.public_id,
-      });
-    } catch (error) {
-      console.error("Upload error:", error);
-      res.status(500).json({ error: "Failed to upload image" });
+app.post("/api/upload", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "No image file provided" });
     }
-  },
-);
 
-app.delete("/api/upload/:publicId", authMiddleware, async (req, res) => {
+    const base64Image = req.file.buffer.toString("base64");
+    const dataURI = `data:${req.file.mimetype};base64,${base64Image}`;
+
+    const result = await cloudinary.uploader.upload(dataURI, {
+      folder: "portfolio",
+      transformation: [{ quality: "auto" }],
+    });
+
+    res.json({
+      imageUrl: result.secure_url,
+      publicId: result.public_id,
+    });
+  } catch (error) {
+    console.error("Upload error:", error);
+    res.status(500).json({ error: "Failed to upload image" });
+  }
+});
+
+app.delete("/api/upload/:publicId", async (req, res) => {
   try {
     const { publicId } = req.params;
     await cloudinary.uploader.destroy(publicId);
@@ -286,7 +260,7 @@ app.post("/api/contact", async (req, res) => {
   }
 });
 
-app.get("/api/contact/messages", authMiddleware, async (req, res) => {
+app.get("/api/contact/messages", async (req, res) => {
   try {
     const messages = await Contact.find().sort({ createdAt: -1 });
     res.json(messages);
@@ -295,7 +269,7 @@ app.get("/api/contact/messages", authMiddleware, async (req, res) => {
   }
 });
 
-app.put("/api/contact/messages/:id/read", authMiddleware, async (req, res) => {
+app.put("/api/contact/messages/:id/read", async (req, res) => {
   try {
     const message = await Contact.findByIdAndUpdate(
       req.params.id,
@@ -309,7 +283,7 @@ app.put("/api/contact/messages/:id/read", authMiddleware, async (req, res) => {
   }
 });
 
-app.delete("/api/contact/messages/:id", authMiddleware, async (req, res) => {
+app.delete("/api/contact/messages/:id", async (req, res) => {
   try {
     await Contact.findByIdAndDelete(req.params.id);
     res.json({ message: "Message deleted successfully" });
@@ -330,7 +304,7 @@ app.get("/api/projects", async (req, res) => {
   }
 });
 
-app.post("/api/projects", authMiddleware, async (req, res) => {
+app.post("/api/projects", async (req, res) => {
   try {
     const project = new Project(req.body);
     await project.save();
@@ -340,7 +314,7 @@ app.post("/api/projects", authMiddleware, async (req, res) => {
   }
 });
 
-app.put("/api/projects/:id", authMiddleware, async (req, res) => {
+app.put("/api/projects/:id", async (req, res) => {
   try {
     const project = await Project.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
@@ -352,7 +326,7 @@ app.put("/api/projects/:id", authMiddleware, async (req, res) => {
   }
 });
 
-app.delete("/api/projects/:id", authMiddleware, async (req, res) => {
+app.delete("/api/projects/:id", async (req, res) => {
   try {
     await Project.findByIdAndDelete(req.params.id);
     res.json({ message: "Project deleted successfully" });
@@ -372,7 +346,7 @@ app.get("/api/skills", async (req, res) => {
   }
 });
 
-app.post("/api/skills", authMiddleware, async (req, res) => {
+app.post("/api/skills", async (req, res) => {
   try {
     const skill = new Skill(req.body);
     await skill.save();
@@ -382,7 +356,7 @@ app.post("/api/skills", authMiddleware, async (req, res) => {
   }
 });
 
-app.put("/api/skills/:id", authMiddleware, async (req, res) => {
+app.put("/api/skills/:id", async (req, res) => {
   try {
     const skill = await Skill.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
@@ -394,7 +368,7 @@ app.put("/api/skills/:id", authMiddleware, async (req, res) => {
   }
 });
 
-app.delete("/api/skills/:id", authMiddleware, async (req, res) => {
+app.delete("/api/skills/:id", async (req, res) => {
   try {
     await Skill.findByIdAndDelete(req.params.id);
     res.json({ message: "Skill deleted successfully" });
@@ -414,7 +388,7 @@ app.get("/api/certificates", async (req, res) => {
   }
 });
 
-app.post("/api/certificates", authMiddleware, async (req, res) => {
+app.post("/api/certificates", async (req, res) => {
   try {
     const certificate = new Certificate(req.body);
     await certificate.save();
@@ -424,7 +398,7 @@ app.post("/api/certificates", authMiddleware, async (req, res) => {
   }
 });
 
-app.put("/api/certificates/:id", authMiddleware, async (req, res) => {
+app.put("/api/certificates/:id", async (req, res) => {
   try {
     const certificate = await Certificate.findByIdAndUpdate(
       req.params.id,
@@ -439,7 +413,7 @@ app.put("/api/certificates/:id", authMiddleware, async (req, res) => {
   }
 });
 
-app.delete("/api/certificates/:id", authMiddleware, async (req, res) => {
+app.delete("/api/certificates/:id", async (req, res) => {
   try {
     await Certificate.findByIdAndDelete(req.params.id);
     res.json({ message: "Certificate deleted successfully" });
@@ -462,7 +436,7 @@ app.get("/api/settings/work-status", async (req, res) => {
   }
 });
 
-app.put("/api/settings/work-status", authMiddleware, async (req, res) => {
+app.put("/api/settings/work-status", async (req, res) => {
   try {
     const { workStatus } = req.body;
     const setting = await Setting.findOneAndUpdate(
@@ -491,7 +465,7 @@ app.get("/api/settings/cv", async (req, res) => {
   }
 });
 
-app.put("/api/settings/cv", authMiddleware, async (req, res) => {
+app.put("/api/settings/cv", async (req, res) => {
   try {
     const { cvUrl } = req.body;
     const setting = await Setting.findOneAndUpdate(
@@ -520,7 +494,7 @@ app.get("/api/settings/profile-image", async (req, res) => {
   }
 });
 
-app.put("/api/settings/profile-image", authMiddleware, async (req, res) => {
+app.put("/api/settings/profile-image", async (req, res) => {
   try {
     const { profileImage } = req.body;
     const setting = await Setting.findOneAndUpdate(
@@ -549,8 +523,8 @@ app.get("/api/settings/admin-path", async (req, res) => {
   }
 });
 
-// Update admin path (protected - requires auth)
-app.put("/api/settings/admin-path", authMiddleware, async (req, res) => {
+// Update admin path (no authentication required)
+app.put("/api/settings/admin-path", async (req, res) => {
   try {
     const { adminPath } = req.body;
 
@@ -682,10 +656,12 @@ app.listen(PORT, "0.0.0.0", () => {
   console.log(`   GET  /api/certificates`);
   console.log(`   GET  /api/settings/work-status`);
   console.log(`   GET  /api/settings/admin-path`);
-  console.log(`   PUT  /api/settings/admin-path (protected)`);
+  console.log(`   PUT  /api/settings/admin-path`);
   console.log(`   POST /api/contact`);
+  console.log(`   POST /api/upload`);
   console.log(`\n🔐 Admin access:`);
   console.log(`   Default admin path: love`);
   console.log(`   Update path via Admin Panel settings`);
+  console.log(`\n✨ No authentication required - all routes are public`);
   console.log(`\n`);
 });

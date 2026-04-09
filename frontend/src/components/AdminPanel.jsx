@@ -40,16 +40,19 @@ const AdminPanel = () => {
   
   // Add this function with other functions
   const updateAdminPath = async () => {
-    if (!adminPath || !/^[a-zA-Z0-9-]+$/.test(adminPath)) {
+    const pathRegex = /^[a-zA-Z0-9-]+$/;
+
+    if (!adminPath || !pathRegex.test(adminPath)) {
       alert('Admin path can only contain letters, numbers, and hyphens');
       return;
     }
     
     setUpdatingPath(true);
     try {
+      
       await settingsAPI.updateAdminPath(adminPath);
       alert(`Admin path updated to: ${adminPath}\nNew admin URL will be active after page refresh.`);
-      // Refresh to apply new path
+
       setTimeout(() => {
         window.location.reload();
       }, 1000);
@@ -453,7 +456,7 @@ const AdminPanel = () => {
             <p className="text-sm text-gray-500 mb-3">Change your adimn panel URL path</p>
             <div className="flex gap-3">
               <input type="text" value={adminPath} onChange={(e) => setAdminPath(e.target.value)}
-              placeholder="admin secret" className="flex-1 p-3 border rounded-xl dark:bg-slate-700 dark:border-slate-600" pattern="[a-zA-Z0-9-]+"/>
+              placeholder="admin secret" className="flex-1 p-3 border rounded-xl dark:bg-slate-700 dark:border-slate-600"/>
               <button onClick={updateAdminPath} disabled={updatingPath} className="px-6 py-3 bg-purple-600 text-white rounded-xl font-bold hover:bg-purple-50 transition-all disabled:opacity-50">{updatingPath ? 'updating...' : 'Update path'}</button>
             </div>
             <p className="text-xs text-grey-500 mt-2">
