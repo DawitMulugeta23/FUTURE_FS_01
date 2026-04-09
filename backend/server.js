@@ -9,38 +9,6 @@ require("dotenv").config();
 
 const app = express();
 
-app.use(cors({
-  origin:[
-    "https://dawitmulugeta23.github.io",
-    "http://localhost:5173",
-    "http://localhost:3000"
-  ],
-  credentials:true,
-  methods:['GET','POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders:['Content-Type', 'Authorization', 'Origin', 'X-Requested-with','accept'],
-  optionsSuccessStatus:200
-}));
-app.use((req, res, next)=>{
-  const allowOrigins=[
-    "https://dawitmulugeta23.github.io",
-    "http://localost:5173",
-    "http://localhost:3000"
-  ];
-  const origin = req.headers.origin;
-  if(allowOrigins.includes(origin)){
-    res.header("Access-Control-Allow-Origin",origin);
-  }
-  res.header("Access-Control-Allow-Credentials", "true");
-  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
-  res.header("Access-Control-Max-Age", "86400"); // Cache preflight for 24 hours
-  
-  // Handle preflight requests
-  if (req.method === "OPTIONS") {
-    return res.status(200).json({});
-  }
-  next();
-});
 // Cloudinary Configuration
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME || "dnjwdbxxt",
@@ -50,14 +18,29 @@ cloudinary.config({
 });
 
 // Email Configuration
-const transporter = nodemailer.createTransport({
+const emailTransporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || "smtp.gmail.com",
   port: parseInt(process.env.SMTP_PORT) || 587,
-  secure: false,
+  secure: false, // true for 465, false for 587
   auth: {
     user: process.env.SMTP_USER || "dawitmulugetas23@gmail.com",
     pass: process.env.SMTP_PASS || "",
   },
+  tls: {
+    rejectUnauthorized: false,
+  },
+});
+
+// Verify email configuration on startup
+emailTransporter.verify((error, success) => {
+  if (error) {
+    console.error("❌ Email configuration error:", error);
+    console.log(
+      "⚠️ Please check your SMTP credentials in environment variables",
+    );
+  } else {
+    console.log("✅ Email server is ready to send messages");
+  }
 });
 
 // Configure multer for memory storage
@@ -79,7 +62,28 @@ const upload = multer({
   },
 });
 
-// CORS middleware - Configured for production
+// CORS middleware - Updated for better compatibility
+app.use(
+  cors({
+    origin: [
+      "https://dawitmulugeta23.github.io",
+      "http://localhost:5173",
+      "http://localhost:3000",
+    ],
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "Origin",
+      "X-Requested-With",
+      "Accept",
+    ],
+    optionsSuccessStatus: 200,
+  }),
+);
+
+// Additional CORS headers for all responses
 app.use((req, res, next) => {
   const allowedOrigins = [
     "https://dawitmulugeta23.github.io",
@@ -87,6 +91,7 @@ app.use((req, res, next) => {
     "http://localhost:3000",
   ];
   const origin = req.headers.origin;
+
   if (allowedOrigins.includes(origin)) {
     res.header("Access-Control-Allow-Origin", origin);
   }
@@ -96,7 +101,9 @@ app.use((req, res, next) => {
     "Access-Control-Allow-Headers",
     "Origin, X-Requested-With, Content-Type, Accept, Authorization",
   );
+  res.header("Access-Control-Max-Age", "86400"); // Cache preflight for 24 hours
 
+  // Handle preflight requests
   if (req.method === "OPTIONS") {
     return res.status(200).json({});
   }
@@ -235,62 +242,137 @@ app.delete("/api/upload/:publicId", async (req, res) => {
 app.post("/api/contact", async (req, res) => {
   try {
     const { name, email, subject, message } = req.body;
-    console.log("Contact form submission received: ",{name, email, subject});
+
+    console.log("📧 Contact form submission received:", {
+      name,
+      email,
+      subject,
+    });
+
+    // Validate required fields
     if (!name || !email || !subject || !message) {
       return res.status(400).json({ error: "All fields are required" });
     }
 
+    // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       return res.status(400).json({ error: "Invalid email format" });
     }
 
+    // Save to database
     const newMessage = new Contact({ name, email, subject, message });
     await newMessage.save();
-    console.log("Message saved to Database");
+    console.log("✅ Message saved to database");
 
-    let emailSent = false;
-    try {
-      if (process.env.SMTP_PASS) {
-        await transporter.sendMail({
-          from: `"Portfolio Contact" <${process.env.SMTP_USER}>`,
-          to: process.env.EMAIL_FROM || "dawitmulugetas23@gmail.com",
-          replyTo: email,
-          subject: `Portfolio Contact: ${subject}`,
-          html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
-              <h2 style="color: #2563eb; border-bottom: 2px solid #2563eb; padding-bottom: 10px;">New Message From Your Portfolio</h2>
-              <div style="margin: 20px 0;">
-                <p><strong>Name:</strong> ${name}</p>
-                <p><strong>Email:</strong> <a href="mailto:${email}">${email}</a></p>
-                <p><strong>Subject:</strong> ${subject}</p>
-                <p><strong>Message:</strong></p>
-                <div style="background-color: #f3f4f6; padding: 15px; border-radius: 5px; margin-top: 10px;">
-                  <p style="margin: 0; white-space: pre-wrap;">${message}</p>
-                </div>
-              </div>
-              <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e0e0e0; font-size: 12px; color: #6b7280;">
-                <p>This message was sent from your portfolio website contact form.</p>
-                <p>Sent at: ${new Date().toLocaleString()}</p>
-              </div>
+    // Prepare email content
+    const emailSubject = `📬 Portfolio Contact: ${subject}`;
+    const emailHtml = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px; }
+          .header { background: linear-gradient(135deg, #2563eb, #1e40af); color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0; margin: -20px -20px 20px -20px; }
+          .field { margin-bottom: 15px; }
+          .label { font-weight: bold; color: #2563eb; }
+          .message-box { background-color: #f3f4f6; padding: 15px; border-radius: 5px; margin-top: 10px; border-left: 4px solid #2563eb; }
+          .footer { margin-top: 20px; padding-top: 20px; border-top: 1px solid #e0e0e0; font-size: 12px; color: #6b7280; text-align: center; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h2>✨ New Portfolio Message ✨</h2>
+          </div>
+          <div class="field">
+            <span class="label">👤 From:</span> ${name}
+          </div>
+          <div class="field">
+            <span class="label">📧 Email:</span> <a href="mailto:${email}">${email}</a>
+          </div>
+          <div class="field">
+            <span class="label">📋 Subject:</span> ${subject}
+          </div>
+          <div class="field">
+            <span class="label">💬 Message:</span>
+            <div class="message-box">
+              ${message.replace(/\n/g, "<br>")}
             </div>
-          `,
-          text: `New Message From Your Portfolio\n\nName: ${name}\nEmail: ${email}\nSubject: ${subject}\nMessage: ${message}`,
-        });
-        emailSent = true;
-        console.log(`📧 Email sent successfully to ${process.env.EMAIL_FROM}`);
-      } else {
-        console.log("⚠️ SMTP_PASS not configured, email not sent");
-      }
-    } catch (emailError) {
-      console.error("Email sending error (non-critical):", emailError.message);
+          </div>
+          <div class="footer">
+            <p>Sent from your portfolio website contact form</p>
+            <p>📅 ${new Date().toLocaleString()}</p>
+            <p>💡 Reply directly to: <a href="mailto:${email}">${email}</a></p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const emailText = `
+      New Portfolio Message
+      
+      From: ${name}
+      Email: ${email}
+      Subject: ${subject}
+      Message: ${message}
+      
+      Sent at: ${new Date().toLocaleString()}
+      Reply to: ${email}
+    `;
+
+    // Try to send email
+    let emailSent = false;
+    let emailError = null;
+
+    try {
+      // Check if SMTP_PASS is configured
+      if (!process.env.SMTP_PASS) {
+        throw new Error(
+          "SMTP_PASS not configured. Please add Gmail App Password to environment variables.",
+        );
       }
 
-    res.status(200).json({
-      success: true,
-      message: "Message sent successfully! I will get back to you soon.",
-      emailSent:emailSent
-    });
+      const mailOptions = {
+        from: `"Portfolio Contact" <${process.env.SMTP_USER}>`,
+        to:
+          process.env.EMAIL_TO ||
+          process.env.EMAIL_FROM ||
+          "dawitmulugetas23@gmail.com",
+        replyTo: email,
+        subject: emailSubject,
+        html: emailHtml,
+        text: emailText,
+      };
+
+      const info = await emailTransporter.sendMail(mailOptions);
+      console.log("✅ Email sent successfully:", info.messageId);
+      emailSent = true;
+    } catch (error) {
+      console.error("❌ Email sending error:", error.message);
+      emailError = error.message;
+      // Don't return error - message is already saved to database
+    }
+
+    // Return response
+    if (emailSent) {
+      res.status(200).json({
+        success: true,
+        message: "Message sent successfully! I will get back to you soon.",
+        emailSent: true,
+      });
+    } else {
+      res.status(200).json({
+        success: true,
+        message:
+          "Message saved! (Email notification pending - I'll check manually)",
+        emailSent: false,
+        emailError: emailError,
+      });
+    }
   } catch (error) {
     console.error("Contact form error:", error);
     res
@@ -327,6 +409,40 @@ app.delete("/api/contact/messages/:id", async (req, res) => {
     await Contact.findByIdAndDelete(req.params.id);
     res.json({ message: "Message deleted successfully" });
   } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==================== TEST EMAIL ROUTE ====================
+
+app.get("/api/test-email", async (req, res) => {
+  try {
+    if (!process.env.SMTP_PASS) {
+      return res.status(400).json({
+        error:
+          "SMTP_PASS not configured. Please add Gmail App Password to environment variables.",
+        instruction:
+          "1. Go to Google Account → Security\n2. Enable 2-Step Verification\n3. Create App Password for 'Mail'\n4. Add the 16-character password to Render environment variables",
+      });
+    }
+
+    const testResult = await emailTransporter.sendMail({
+      from: `"Test" <${process.env.SMTP_USER}>`,
+      to: "dawitmulugetas23@gmail.com",
+      subject: "✅ Test Email from Portfolio Backend",
+      text: "If you receive this, your email configuration is working correctly!",
+      html:
+        "<h1>✅ Success!</h1><p>Your email configuration is working correctly.</p><p>Timestamp: " +
+        new Date().toLocaleString() +
+        "</p>",
+    });
+    res.json({
+      success: true,
+      messageId: testResult.messageId,
+      message: "Test email sent successfully!",
+    });
+  } catch (error) {
+    console.error("Test email error:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -688,6 +804,7 @@ connectWithRetry();
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`\n🚀 Server running on port ${PORT}`);
   console.log(`📍 API test: http://localhost:${PORT}/api/test`);
+  console.log(`📍 Test email: http://localhost:${PORT}/api/test-email`);
   console.log(`📍 MongoDB: Using Atlas`);
   console.log(`\n📊 Available endpoints:`);
   console.log(`   GET  /api/projects`);
@@ -698,9 +815,12 @@ app.listen(PORT, "0.0.0.0", () => {
   console.log(`   PUT  /api/settings/admin-path`);
   console.log(`   POST /api/contact`);
   console.log(`   POST /api/upload`);
+  console.log(`   GET  /api/test-email`);
   console.log(`\n🔐 Admin access:`);
   console.log(`   Default admin path: love`);
   console.log(`   Update path via Admin Panel settings`);
-  console.log(`\n✨ No authentication required - all routes are public`);
+  console.log(
+    `\n📧 Email status: ${process.env.SMTP_PASS ? "✅ Configured" : "❌ Not configured (add SMTP_PASS)"}`,
+  );
   console.log(`\n`);
 });
