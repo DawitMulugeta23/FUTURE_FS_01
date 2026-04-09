@@ -5,8 +5,8 @@ import { settingsAPI } from "../services/api";
 const Hero = () => {
   const isDark = useSelector((state) => state.nav.darkMode);
   const [workStatus, setWorkStatus] = useState(true);
-  const [cvUrl, setCvUrl] = useState('/assets/Dawitm.png');
-  const [profileImage, setProfileImage] = useState('/assets/profile.png');
+  const [cvUrl, setCvUrl] = useState('');
+  const [profileImage, setProfileImage] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
