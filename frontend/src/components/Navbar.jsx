@@ -8,7 +8,7 @@ const Navbar = () => {
 
   const [isOpen, setIsOpen] = useState(false);
 
-  const navItems = ["home", "about", "skills", "project", "contact"];
+  const navItems = ["home", "about", "skills", "projects", "contact"];
 
   const handleNavClick = (item) => {
     dispatch(setActiveSection(item));
@@ -23,7 +23,7 @@ const Navbar = () => {
   // Track scroll position to update active section
   useEffect(() => {
     const handleScroll = () => {
-      const sections = navItems.map(item => document.getElementById(item));
+      const sections = navItems.map((item) => document.getElementById(item));
       const scrollPosition = window.scrollY + 100; // Offset for navbar
 
       for (let i = 0; i < sections.length; i++) {
@@ -45,7 +45,7 @@ const Navbar = () => {
     window.addEventListener("scroll", handleScroll);
     // Initial check
     handleScroll();
-    
+
     return () => window.removeEventListener("scroll", handleScroll);
   }, [dispatch, activeSection, navItems]);
 
@@ -57,7 +57,7 @@ const Navbar = () => {
           : "bg-white/95 backdrop-blur-md text-gray-800 shadow-md"
       }`}
     >
-      {/* Logo - Changed to Dawit */}
+      {/* Logo */}
       <div className="text-2xl font-black text-blue-600 relative z-[60]">
         Dawit<span className="text-gray-400">.</span>
       </div>
@@ -70,9 +70,9 @@ const Navbar = () => {
               key={item}
               href={`#${item}`}
               onClick={() => handleNavClick(item)}
-              className={`${
-                activeSection === item 
-                  ? "text-blue-600 border-b-2 border-blue-600 pb-1" 
+              className={`cursor-pointer ${
+                activeSection === item
+                  ? "text-blue-600 border-b-2 border-blue-600 pb-1"
                   : "opacity-60 hover:opacity-100"
               } transition-all duration-300`}
             >
@@ -116,7 +116,7 @@ const Navbar = () => {
         </button>
       </div>
 
-      {/* --- Mobile Menu Overlay (Solid Background) --- */}
+      {/* Mobile Menu Overlay */}
       <div
         className={`fixed top-0 right-0 w-3/4 h-[70vh] transition-all duration-500 ease-in-out transform 
         ${isOpen ? "translate-x-0" : "translate-x-full"} 
@@ -133,7 +133,7 @@ const Navbar = () => {
               key={item}
               href={`#${item}`}
               onClick={() => handleNavClick(item)}
-              className={`text-2xl font-black uppercase tracking-[0.3em] transition-all duration-300 ${
+              className={`cursor-pointer text-2xl font-black uppercase tracking-[0.3em] transition-all duration-300 ${
                 activeSection === item
                   ? "text-blue-600 scale-125"
                   : darkMode
